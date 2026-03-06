@@ -211,10 +211,11 @@
   const loader = new THREE.TextureLoader();
   loader.setCrossOrigin("anonymous");
 
-  function createPhoto(url) {
+  function createPhoto(url, index, total) {
     const texture = loader.load(url);
 
-    const geometry = new THREE.PlaneGeometry(7, 7);
+    const photoSize = isMobile ? 4.6 : 7;
+    const geometry = new THREE.PlaneGeometry(photoSize, photoSize);
     const material = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
@@ -222,13 +223,32 @@
     });
 
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.x = (Math.random() - 0.5) * 72;
-    mesh.position.y = (Math.random() - 0.5) * 52;
-    mesh.position.z = (Math.random() - 0.5) * 130;
+
+    if (isMobile) {
+      // Mobile gets a denser, centered layout so more photos are visible at once.
+      const cols = 3;
+      const rows = Math.ceil(total / cols);
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const xSpan = 30;
+      const ySpan = 26;
+      const xStep = xSpan / (cols - 1);
+      const yStep = ySpan / Math.max(1, rows - 1);
+
+      mesh.position.x = -xSpan / 2 + col * xStep + (Math.random() - 0.5) * 1.8;
+      mesh.position.y = ySpan / 2 - row * yStep + (Math.random() - 0.5) * 1.4;
+      mesh.position.z = -18 + (Math.random() - 0.5) * 30;
+    } else {
+      mesh.position.x = (Math.random() - 0.5) * 72;
+      mesh.position.y = (Math.random() - 0.5) * 52;
+      mesh.position.z = (Math.random() - 0.5) * 130;
+    }
 
     mesh.userData = {
       spin: 0.003 + Math.random() * 0.002,
-      bobOffset: Math.random() * Math.PI * 2
+      bobOffset: Math.random() * Math.PI * 2,
+      baseY: mesh.position.y,
+      bobAmp: isMobile ? 0.11 : 0.18
     };
 
     scene.add(mesh);
@@ -252,7 +272,7 @@
 
   for (let i = 0; i < photoCount; i++) {
     const src = personalPhotoPaths[i % personalPhotoPaths.length];
-    photos.push(createPhoto(src));
+    photos.push(createPhoto(src, i, photoCount));
   }
 
   function createHeartSpriteTexture() {
@@ -388,7 +408,9 @@
 
     for (const photo of photos) {
       photo.rotation.y += photo.userData.spin;
-      photo.position.y += Math.sin(t + photo.userData.bobOffset) * 0.015;
+      photo.position.y =
+        photo.userData.baseY +
+        Math.sin(t + photo.userData.bobOffset) * photo.userData.bobAmp;
     }
 
     for (const heart of hearts) {
