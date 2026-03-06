@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Floating Love Scene</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --bg-1: #07050b;
+    --bg-2: #120918;
+    --bg-3: #241029;
+    --text: #fff4f7;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-family: "Quicksand", "Trebuchet MS", sans-serif;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255, 130, 170, 0.14), transparent 38%),
+      radial-gradient(circle at 85% 78%, rgba(255, 170, 200, 0.12), transparent 42%),
+      linear-gradient(155deg, var(--bg-1), var(--bg-2) 42%, var(--bg-3));
+  }
+
+  canvas {
+    display: block;
+  }
+
+  .music-toggle {
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+    padding: 10px 14px;
+    color: #fff8fb;
+    background: rgba(24, 10, 30, 0.62);
+    font: 700 12px "Quicksand", "Trebuchet MS", sans-serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+  }
+
+  .music-toggle:hover {
+    background: rgba(36, 14, 45, 0.76);
+  }
+
+  .music-controls {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .volume-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(24, 10, 30, 0.62);
+    backdrop-filter: blur(5px);
+  }
+
+  .volume-wrap label {
+    font: 700 11px "Quicksand", "Trebuchet MS", sans-serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ffd8e7;
+  }
+
+  .volume-wrap input[type="range"] {
+    width: 92px;
+    accent-color: #ff7da6;
+    cursor: pointer;
+  }
+
+  @media (max-width: 640px) {
+    .music-controls {
+      top: auto;
+      bottom: 52px;
+      right: 10px;
+      left: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  }
+</style>
+</head>
+
+<body>
+<div class="music-controls">
+  <button class="music-toggle" id="musicToggle" type="button">Play Music</button>
+  <div class="volume-wrap">
+    <label for="volumeControl">Volume</label>
+    <input id="volumeControl" type="range" min="0" max="100" value="45" />
+  </div>
+</div>
+<audio
+  id="bgMusic"
+  src="./music/constellations.mp3"
+  loop
+  preload="auto"
+></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script>
+  const scene = new THREE.Scene();
+
+  const camera = new THREE.PerspectiveCamera(
+    70,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  document.body.appendChild(renderer.domElement);
+
+  camera.position.set(0, 0, 32);
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+  scene.add(ambientLight);
+
+  const light = new THREE.PointLight(0xffc0d8, 1.2, 220);
+  light.position.set(0, 20, 20);
+  scene.add(light);
+
+  const messages = [
+    "I LOVE YOU BABY ❤️",
+    "MY FOREVER ❤️",
+    "YOU ARE MY WORLD ❤️",
+    "MWAHHH 💋",
+    "LOVE YOU ALWAYS ❤️",
+    "FOREVER TOGETHER ❤️"
+  ];
+
+  function createTextTexture(text) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 512;
+
+    const ctx = canvas.getContext("2d");
+
+    // Keep card transparent so only text and glow are visible.
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "700 80px Quicksand";
+
+    ctx.shadowColor = "rgba(255, 120, 165, 0.65)";
+    ctx.shadowBlur = 28;
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.98)";
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  function createLovePanel() {
+    const message = messages[Math.floor(Math.random() * messages.length)];
+    const texture = createTextTexture(message);
+
+    const geometry = new THREE.PlaneGeometry(11, 5.5);
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.x = (Math.random() - 0.5) * 90;
+    mesh.position.y = (Math.random() - 0.5) * 56;
+    mesh.position.z = (Math.random() - 0.5) * 160;
+
+    mesh.userData = {
+      speed: 0.08 + Math.random() * 0.06,
+      twirl: (Math.random() - 0.5) * 0.004
+    };
+
+    scene.add(mesh);
+    return mesh;
+  }
+
+  const panels = [];
+  for (let i = 0; i < 56; i++) {
+    panels.push(createLovePanel());
+  }
+
+  const loader = new THREE.TextureLoader();
+  loader.setCrossOrigin("anonymous");
+
+  function createPhoto(url) {
+    const texture = loader.load(url);
+
+    const geometry = new THREE.PlaneGeometry(7, 7);
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      side: THREE.DoubleSide
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.x = (Math.random() - 0.5) * 72;
+    mesh.position.y = (Math.random() - 0.5) * 52;
+    mesh.position.z = (Math.random() - 0.5) * 130;
+
+    mesh.userData = {
+      spin: 0.003 + Math.random() * 0.002,
+      bobOffset: Math.random() * Math.PI * 2
+    };
+
+    scene.add(mesh);
+    return mesh;
+  }
+
+  const photos = [];
+  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  const photoCount = isMobile ? 10 : 15;
+  const personalPhotoPaths = [
+    "./images/IMG-20260306-WA0058.jpg",
+    "./images/IMG-20260306-WA0059.jpg",
+    "./images/IMG-20260306-WA0064.jpg",
+    "./images/IMG-20260306-WA0065.jpg",
+    "./images/IMG-20260306-WA0066.jpg",
+    "./images/IMG-20260306-WA0072.jpg",
+    "./images/IMG-20260306-WA0075.jpg",
+    "./images/IMG-20260306-WA0078.jpg",
+    "./images/IMG-20260306-WA0079.jpg"
+  ];
+
+  for (let i = 0; i < photoCount; i++) {
+    const src = personalPhotoPaths[i % personalPhotoPaths.length];
+    photos.push(createPhoto(src));
+  }
+
+  function createHeartSpriteTexture() {
+    const size = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, size, size);
+
+    const cx = size / 2;
+    const cy = size * 0.58;
+    const scale = size * 0.022;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, -scale);
+
+    // Draw a classic heart curve as a filled sprite.
+    ctx.beginPath();
+    for (let i = 0; i <= 180; i++) {
+      const t = (i / 180) * Math.PI;
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y =
+        13 * Math.cos(t) -
+        5 * Math.cos(2 * t) -
+        2 * Math.cos(3 * t) -
+        Math.cos(4 * t);
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.closePath();
+
+    const fill = ctx.createLinearGradient(-10, 14, 10, -12);
+    fill.addColorStop(0, "#ff4f7c");
+    fill.addColorStop(1, "#ff9bb7");
+    ctx.fillStyle = fill;
+    ctx.shadowColor = "rgba(255, 120, 160, 0.85)";
+    ctx.shadowBlur = 12;
+    ctx.fill();
+
+    ctx.restore();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  const heartTexture = createHeartSpriteTexture();
+  const hearts = [];
+
+  for (let i = 0; i < 240; i++) {
+    const shade = 0.78 + Math.random() * 0.22;
+    const heartMaterial = new THREE.SpriteMaterial({
+      map: heartTexture,
+      color: new THREE.Color(1, shade * 0.7, shade * 0.82),
+      transparent: true,
+      opacity: 0.9
+    });
+
+    const heart = new THREE.Sprite(heartMaterial);
+    heart.position.x = (Math.random() - 0.5) * 100;
+    heart.position.y = (Math.random() - 0.5) * 70;
+    heart.position.z = (Math.random() - 0.5) * 170;
+    const baseSize = 0.55 + Math.random() * 0.95;
+    heart.scale.set(baseSize, baseSize, 1);
+
+    heart.userData = {
+      rise: 0.02 + Math.random() * 0.04,
+      drift: (Math.random() - 0.5) * 0.014,
+      baseSize,
+      pulseOffset: Math.random() * Math.PI * 2
+    };
+
+    scene.add(heart);
+    hearts.push(heart);
+  }
+
+  const music = document.getElementById("bgMusic");
+  const musicToggle = document.getElementById("musicToggle");
+  const volumeControl = document.getElementById("volumeControl");
+  let musicPlaying = false;
+  let musicVolume = Number(volumeControl.value) / 100;
+
+  music.volume = musicVolume;
+
+  async function setMusicState(shouldPlay) {
+    if (shouldPlay) {
+      music.volume = musicVolume;
+      try {
+        await music.play();
+        musicPlaying = true;
+      } catch {
+        musicPlaying = false;
+      }
+    } else {
+      music.pause();
+      musicPlaying = false;
+    }
+
+    musicToggle.textContent = musicPlaying ? "Pause Music" : "Play Music";
+  }
+
+  musicToggle.addEventListener("click", () => {
+    setMusicState(!musicPlaying);
+  });
+
+  volumeControl.addEventListener("input", () => {
+    musicVolume = Number(volumeControl.value) / 100;
+    music.volume = musicVolume;
+  });
+
+  let t = 0;
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    t += 0.006;
+
+    for (const panel of panels) {
+      panel.rotation.y += panel.userData.twirl;
+      panel.position.z += panel.userData.speed;
+      panel.position.x += Math.sin(t + panel.position.y * 0.03) * 0.01;
+
+      if (panel.position.z > 50) {
+        panel.position.z = -140;
+      }
+    }
+
+    for (const photo of photos) {
+      photo.rotation.y += photo.userData.spin;
+      photo.position.y += Math.sin(t + photo.userData.bobOffset) * 0.015;
+    }
+
+    for (const heart of hearts) {
+      heart.position.y += heart.userData.rise;
+      heart.position.x += heart.userData.drift;
+      const pulse = 0.14 * Math.sin(t * 2 + heart.userData.pulseOffset);
+      const s = heart.userData.baseSize + pulse;
+      heart.scale.set(s, s, 1);
+
+      if (heart.position.y > 45) {
+        heart.position.y = -45;
+      }
+      if (heart.position.x > 55 || heart.position.x < -55) {
+        heart.userData.drift *= -1;
+      }
+    }
+
+    // Gentle floating camera movement keeps depth without clipping through the scene.
+    camera.position.x = Math.sin(t * 0.7) * 1.8;
+    camera.position.y = Math.cos(t * 0.5) * 1.2;
+    camera.lookAt(0, 0, 0);
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  });
+</script>
+</body>
+</html>
